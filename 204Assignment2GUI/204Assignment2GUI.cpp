@@ -332,9 +332,8 @@ bool createTime(HWND hWnd) {
 	int tbStatus;
 	
 	try {
-
 		if (GetWindowTextLength(tbHours) == 0) {
-			h = 0;
+			h = 1;
 		}
 		else {
 			hString.resize(GetWindowTextLength(tbHours) + 1, '\0'); // resize the string so iit can contain the text stored in the edit-control.
