@@ -30,5 +30,7 @@ public:
 	int getMin();
 	int getSec();
 
+	void addTime();
+
 };
 

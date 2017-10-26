@@ -5,13 +5,14 @@
 #include "204Assignment2GUI.h"
 #include "Time.h"
 #include <string>
+#include <exception>
 using namespace std;
 #define MAX_LOADSTRING 100
 
 
-bool validTime(int, int, int);
-bool createTime();
+bool createTime(HWND);
 void updateTime();
+void updateAorP(HWND);
 
 // Global Variables:
 HINSTANCE hInst;                                // current instance
@@ -33,8 +34,10 @@ HWND btnFormat;
 HWND radioAM;
 HWND radioPM; 
 HWND dropDown; 
-Time myTime = Time();
+Time myTime;
 int h, m, s;
+// action commands
+const int i_text = 1, cmndBtnPlus = 6, cmndBtnMinus = 2, cmndBtnFormat = 3, cmndRadioam = 4, cmndRadiopm = 5;
 
 
 // Forward declarations of functions included in this code module:
@@ -155,8 +158,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	// Send the CB_SETCURSEL message to display an initial item 
 	//  in the selection field  
 	SendMessage(dropDown, CB_SETCURSEL, (WPARAM)2, (LPARAM)0);
-	const int i_text = 1, cmndBtnPlus = 6, cmndBtnMinus = 2, cmndBtnFormat = 3, cmndRadioam = 4, cmndRadiopm = 5;
-	int i; 
+	
     switch (message)
     {
     case WM_COMMAND:
@@ -175,38 +177,48 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 			case cmndBtnPlus:
 
-				if (createTime() == false) {
-					::MessageBox(hWnd, TEXT("Error!"), TEXT("Invalid Input!"), MB_OK);
-				} else {
+				if (createTime(hWnd) == true) {
 					myTime++;
 					updateTime();
 				}
+
+				updateAorP(hWnd);
+				
+				
 				break;
 
 			case cmndBtnMinus: 
-				if (createTime() == false) {
-					::MessageBox(hWnd, TEXT("Error!"), TEXT("Invalid Input!"), MB_OK);
-				} else {
+				if (createTime(hWnd) == true) {
 					myTime--;
 					updateTime();
 				}
+
+				updateAorP(hWnd);
 				break; 
 
 			case cmndBtnFormat:
-				createTime();
-				myTime._12OR24 ^= 1;
-				if (myTime._12OR24 == true) {
-					SetWindowText(btnFormat,TEXT("24 Hour Format"));
-					ShowWindow(radioAM, SW_SHOW);
-					ShowWindow(radioPM, SW_SHOW);
-					myTime.to12();
+				
+				if (createTime(hWnd)) {
+					if (myTime._12OR24) {
+						myTime.to24();
+					}
+					else {
+						myTime.to12();
+					}
 					updateTime();
-				} else {
-					SetWindowText(btnFormat, TEXT("12 Hour Format"));
-					ShowWindow(radioAM, SW_HIDE);
-					ShowWindow(radioPM, SW_HIDE);
-					myTime.to24();
-					updateTime();
+					myTime._12OR24 ^= 1;
+					if (myTime._12OR24 == true) {
+						SetWindowText(btnFormat, TEXT("24 Hour Format"));
+						ShowWindow(radioAM, SW_SHOW);
+						ShowWindow(radioPM, SW_SHOW);
+					}
+					else {
+						SetWindowText(btnFormat, TEXT("12 Hour Format"));
+						ShowWindow(radioAM, SW_HIDE);
+						ShowWindow(radioPM, SW_HIDE);
+					}
+
+					updateAorP(hWnd);
 				}
 				break;
 
@@ -251,6 +263,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 
 	case WM_CREATE:
+
+		// GUI LAYOUT
 		lblHours = CreateWindow(TEXT("STATIC"), TEXT("Hours"), WS_VISIBLE | WS_CHILD, 10, 10, 60, 20, hWnd, NULL, NULL, NULL);
 		lblMins = CreateWindow(TEXT("STATIC"), TEXT("Minutes"), WS_VISIBLE | WS_CHILD, 110, 10, 60, 20, hWnd, NULL, NULL, NULL);
 		lblSecs = CreateWindow(TEXT("STATIC"), TEXT("Seconds"), WS_VISIBLE | WS_CHILD, 210, 10, 60, 20, hWnd, NULL, NULL, NULL);
@@ -265,9 +279,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		btnMinus = CreateWindow(TEXT("button"), TEXT("-"), WS_VISIBLE | WS_CHILD, 70, 100, 50, 25, hWnd, (HMENU)cmndBtnMinus, NULL, NULL);
 		btnFormat = CreateWindow(TEXT("button"), TEXT("24 hour format"), WS_VISIBLE | WS_CHILD, 150, 100, 150, 25, hWnd, (HMENU)cmndBtnFormat, NULL, NULL);
 
+		// Set am as initial state
 		if (SendDlgItemMessage(hWnd, cmndRadioam, BM_GETCHECK, 0, 0) == 0) {
 			SendDlgItemMessage(hWnd, cmndRadioam, BM_SETCHECK, 1, 0);
 		}
+
+		// Create time object
+		myTime = Time();
 		break;
     case WM_DESTROY:
         PostQuitMessage(0);
@@ -278,6 +296,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
+// Updates am or pm raio button with current state
+void updateAorP(HWND hWnd) {
+	if (myTime.aORp == true) {
+		if (SendDlgItemMessage(hWnd, cmndRadioam, BM_GETCHECK, 0, 0) == 0) {
+			SendDlgItemMessage(hWnd, cmndRadioam, BM_SETCHECK, 1, 0);
+			SendDlgItemMessage(hWnd, cmndRadiopm, BM_SETCHECK, 0, 0);
+		}
+	}
+	else {
+		if (SendDlgItemMessage(hWnd, cmndRadiopm, BM_GETCHECK, 0, 0) == 0) {
+			SendDlgItemMessage(hWnd, cmndRadiopm, BM_SETCHECK, 1, 0);
+			SendDlgItemMessage(hWnd, cmndRadioam, BM_SETCHECK, 0, 0);
+		}
+	}
+}
+
+// Updates the text boxes with current time values
 void updateTime() {
 	string h, m, s; 
 	h = to_string(myTime.getHour());
@@ -286,9 +321,10 @@ void updateTime() {
 	SetWindowText(tbHours, h.c_str());
 	SetWindowText(tbMins, m.c_str());
 	SetWindowText(tbSecs, s.c_str());
-}
+} 
  
-bool createTime() {
+// Takes values from user inputs, does validation and populates time object
+bool createTime(HWND hWnd) {
 	
 	string hString;
 	string mString;
@@ -296,37 +332,63 @@ bool createTime() {
 	int tbStatus;
 	
 	try {
-		hString.resize(GetWindowTextLength(tbHours) + 1, '\0'); // resize the string so iit can contain the text stored in the edit-control.
-		tbStatus = GetWindowText(tbHours, LPSTR(hString.c_str()), GetWindowTextLength(tbHours) + 1); // Getting the data the user typed
-		if (tbStatus != 0) {
-			h = stoi(hString);
-			if (myTime._12OR24 == true) {
-				if (myTime.getHour() > 12)
-					throw exception("error");
+
+		if (GetWindowTextLength(tbHours) == 0) {
+			h = 0;
+		}
+		else {
+			hString.resize(GetWindowTextLength(tbHours) + 1, '\0'); // resize the string so iit can contain the text stored in the edit-control.
+			tbStatus = GetWindowText(tbHours, LPSTR(hString.c_str()), GetWindowTextLength(tbHours) + 1); // Getting the data the user type
+			if (tbStatus != 0) {
+				h = stoi(hString);
 			}
-		}else {
-			throw exception("error");
+			else {
+				throw exception("Invalid Input!");
+			}
 		}
 
-		mString.resize(GetWindowTextLength(tbMins) + 1, '\0'); // resize the string so iit can contain the text stored in the edit-control.
-		tbStatus = GetWindowText(tbHours, LPSTR(mString.c_str()), GetWindowTextLength(tbMins) + 1); // Getting the data the user typed
-		if (tbStatus != 0) {
-			m = stoi(mString);
-		} else {
-			throw exception("error");
+		if (GetWindowTextLength(tbMins) == 0) {
+			m = 0; 
+		}
+		else {
+			mString.resize(GetWindowTextLength(tbMins) + 1, '\0'); // resize the string so iit can contain the text stored in the edit-control.
+			tbStatus = GetWindowText(tbMins, LPSTR(mString.c_str()), GetWindowTextLength(tbMins) + 1); // Getting the data the user typed
+			if (tbStatus != 0) {
+				m = stoi(mString);
+			}
+			else {
+				throw exception("Invalid Input!");
+			}
 		}
 
-		sString.resize(GetWindowTextLength(tbSecs) + 1, '\0'); // resize the string so iit can contain the text stored in the edit-control.
-		tbStatus = GetWindowText(tbHours, LPSTR(sString.c_str()), GetWindowTextLength(tbSecs) + 1); // Getting the data the user typed
-		if (tbStatus != 0) {
-			s = stoi(sString);
-		}else {
-			throw exception("error");
+		if (GetWindowTextLength(tbSecs) == 0) {
+			s = 0; 
+		}
+		else {
+			sString.resize(GetWindowTextLength(tbSecs) + 1, '\0'); // resize the string so iit can contain the text stored in the edit-control.
+			tbStatus = GetWindowText(tbSecs, LPSTR(sString.c_str()), GetWindowTextLength(tbSecs) + 1); // Getting the data the user typed
+			if (tbStatus != 0) {
+				s = stoi(sString);
+			}
+			else {
+				throw exception("Invalid Input!");
+			}
 		}
 
-		myTime = Time(h, m, s);
+		myTime.setTime(h,m,s);
+		
+		if (myTime.getMin() >= 60) { throw exception("Minutes has to be less than 60"); }
+
+		if (myTime.getSec() >= 60) { throw exception("Seconds has to be less than 60"); }
+
+		if (myTime._12OR24 == true && ( myTime.getHour() > 12 || myTime.getHour() < 1)) {
+			throw exception("12 Hour Format : Hour has to be between 1-12 inclusive");
+		} else if (myTime._12OR24 == false && ( myTime.getHour() > 23 || myTime.getHour() < 0)) {
+			throw exception("24 Hour Format : Hour has to be between 0-23 inclusive");
+		}
 
 	} catch (exception e) {
+		::MessageBox(hWnd, TEXT(e.what()), TEXT("Error!"), MB_OK);
 		return false;
 	}
 
