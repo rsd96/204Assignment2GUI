@@ -364,7 +364,8 @@ bool createTime(HWND hWnd) {
 			s = 0; 
 		}
 		else {
-			sString.resize(GetWindowTextLength(tbSecs) + 1, '\0'); // resize the string so iit can contain the text stored in the edit-control.
+			// resize the string so iit can contain the text stored in the edit-control.
+			sString.resize(GetWindowTextLength(tbSecs) + 1, '\0'); 
 			tbStatus = GetWindowText(tbSecs, LPSTR(sString.c_str()), GetWindowTextLength(tbSecs) + 1); // Getting the data the user typed
 			if (tbStatus != 0) {
 				s = stoi(sString);
